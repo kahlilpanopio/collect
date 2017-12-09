@@ -346,7 +346,7 @@ public class FormController {
     /**
      * TODO: We need a good description of what this does, exactly, and why.
      */
-    private FormInstance getInstance() {
+    public FormInstance getInstance() {
         return formEntryController.getModel().getForm().getInstance();
     }
 
