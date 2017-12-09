@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -69,6 +70,7 @@ import com.google.zxing.integration.android.IntentResult;
 
 import org.javarosa.core.model.FormIndex;
 import org.javarosa.core.model.data.IAnswerData;
+import org.javarosa.core.model.instance.FormInstance;
 import org.javarosa.core.model.instance.TreeElement;
 import org.javarosa.form.api.FormEntryCaption;
 import org.javarosa.form.api.FormEntryController;
@@ -85,7 +87,6 @@ import org.odk.collect.android.exception.JavaRosaException;
 import org.odk.collect.android.external.ExternalDataManager;
 import org.odk.collect.android.fragments.dialogs.CustomDatePickerDialog;
 import org.odk.collect.android.fragments.dialogs.NumberPickerDialog;
-import org.odk.collect.android.utilities.DependencyProvider;
 import org.odk.collect.android.listeners.AdvanceToNextListener;
 import org.odk.collect.android.listeners.FormLoaderListener;
 import org.odk.collect.android.listeners.FormSavedListener;
@@ -101,15 +102,17 @@ import org.odk.collect.android.provider.FormsProviderAPI.FormsColumns;
 import org.odk.collect.android.provider.InstanceProviderAPI;
 import org.odk.collect.android.provider.InstanceProviderAPI.InstanceColumns;
 import org.odk.collect.android.tasks.FormLoaderTask;
+import org.odk.collect.android.tasks.RecordAutoGpsTask;
 import org.odk.collect.android.tasks.SaveFormIndexTask;
-import org.odk.collect.android.utilities.ActivityAvailability;
-import org.odk.collect.android.utilities.ImageConverter;
 import org.odk.collect.android.tasks.SavePointTask;
 import org.odk.collect.android.tasks.SaveResult;
 import org.odk.collect.android.tasks.SaveToDiskTask;
+import org.odk.collect.android.utilities.ActivityAvailability;
 import org.odk.collect.android.utilities.ApplicationConstants;
+import org.odk.collect.android.utilities.DependencyProvider;
 import org.odk.collect.android.utilities.DialogUtils;
 import org.odk.collect.android.utilities.FileUtils;
+import org.odk.collect.android.utilities.ImageConverter;
 import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.android.utilities.TimerLogger;
 import org.odk.collect.android.utilities.ToastUtils;
@@ -121,6 +124,7 @@ import org.odk.collect.android.widgets.StringWidget;
 import java.io.File;
 import java.io.FileFilter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -223,6 +227,7 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
 
     private FormLoaderTask formLoaderTask;
     private SaveToDiskTask saveToDiskTask;
+    private RecordAutoGpsTask mRecordAutoGpsTask;
 
     private ImageButton nextButton;
     private ImageButton backButton;
@@ -2528,6 +2533,20 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
         dismissDialog(PROGRESS_DIALOG);
 
         final FormController formController = task.getFormController();
+        FormInstance datamodel = formController.getInstance();
+        TreeElement questionRoot = datamodel.getRoot();
+        ArrayList<TreeElement> quesCategoryVector = (ArrayList<TreeElement>) questionRoot.getChildrenWithName("auto_gps");
+
+        // Checks that the "auto_gps" question is present in the current form
+        if (quesCategoryVector.size() != 0) {
+            TreeElement autoGpsQues = quesCategoryVector.get(0);
+            if (autoGpsQues.getValue() == null) { // Gps value is empty, so gps task should be started
+                LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+                mRecordAutoGpsTask = new RecordAutoGpsTask();
+                mRecordAutoGpsTask.execute(locationManager);
+            }
+        }
+
         int requestCode = task.getRequestCode(); // these are bogus if
         // pendingActivityResult is
         // false
