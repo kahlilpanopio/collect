@@ -69,6 +69,7 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 import org.javarosa.core.model.FormIndex;
+import org.javarosa.core.model.data.GeoPointData;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.instance.FormInstance;
 import org.javarosa.core.model.instance.TreeElement;
@@ -89,6 +90,7 @@ import org.odk.collect.android.fragments.dialogs.CustomDatePickerDialog;
 import org.odk.collect.android.fragments.dialogs.NumberPickerDialog;
 import org.odk.collect.android.injection.DependencyProvider;
 import org.odk.collect.android.listeners.AdvanceToNextListener;
+import org.odk.collect.android.listeners.AutoGpsRecordingListener;
 import org.odk.collect.android.listeners.FormLoaderListener;
 import org.odk.collect.android.listeners.FormSavedListener;
 import org.odk.collect.android.listeners.SavePointListener;
@@ -148,7 +150,7 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
         FormLoaderListener, FormSavedListener, AdvanceToNextListener,
         OnGestureListener, SavePointListener, NumberPickerDialog.NumberPickerListener,
         DependencyProvider<ActivityAvailability>,
-        CustomDatePickerDialog.CustomDatePickerDialogListener {
+        CustomDatePickerDialog.CustomDatePickerDialogListener, AutoGpsRecordingListener {
 
     // save with every swipe forward or back. Timings indicate this takes .25
     // seconds.
@@ -230,6 +232,8 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
 
     private ImageButton nextButton;
     private ImageButton backButton;
+
+    private TreeElement autoGpsQues;
 
     private Toolbar toolbar;
     private ODKView odkView;
@@ -2536,10 +2540,20 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
 
         // Checks that the "auto_gps" question is present in the current form
         if (quesCategoryVector.size() != 0) {
-            TreeElement autoGpsQues = quesCategoryVector.get(0);
+            autoGpsQues = quesCategoryVector.get(0);
             if (autoGpsQues.getValue() == null) { // Gps value is empty, so gps task should be started
                 LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+
+                if (mRecordAutoGpsTask != null && mRecordAutoGpsTask.getStatus() != AsyncTask.Status.FINISHED) {
+                    return; // Gps recording in progress!!!
+                } else if (mRecordAutoGpsTask != null) {
+                    mRecordAutoGpsTask.setAutoGpsRecordingListener(null);
+                    mRecordAutoGpsTask.cancel(true);
+                    mRecordAutoGpsTask = null;
+                }
+
                 mRecordAutoGpsTask = new RecordAutoGpsTask();
+                mRecordAutoGpsTask.setAutoGpsRecordingListener(this);
                 mRecordAutoGpsTask.execute(locationManager);
             }
         }
@@ -2665,6 +2679,22 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
 
         refreshCurrentView();
     }
+
+    @Override
+    public void autoGpsRecordingComplete(String gpsResult) {
+        String[] sa = gpsResult.split(" ");
+        double gp[] = new double[4];
+        gp[0] = Double.valueOf(sa[0]).doubleValue();
+        gp[1] = Double.valueOf(sa[1]).doubleValue();
+        gp[2] = Double.valueOf(sa[2]).doubleValue();
+        gp[3] = Double.valueOf(sa[3]).doubleValue();
+
+        autoGpsQues.setAnswer(new GeoPointData(gp));
+
+        // TODO To be commented out later
+        Toast.makeText(this, "Auto Gps Recorded", Toast.LENGTH_SHORT).show();
+    }
+
 
     /**
      * called by the FormLoaderTask if something goes wrong.
