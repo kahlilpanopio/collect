@@ -23,18 +23,20 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
 
+import org.odk.collect.android.listeners.AutoGpsRecordingListener;
+
 /**
  * The background task to automatically collect gps
  * This is done when there is a gps question with binding "auto_gps"
  *
- * @author Raghu Mittal
+ * @author Raghu Mittal (raghu.mittal@gmail.com)
  */
 public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> implements LocationListener {
 	private static final String t = "RecordAutoGpsTask";
 	private Location mLocation;
 	private LocationManager mLocationManager;
 
-	//private RecordGpsListener mGpsListener;
+	private AutoGpsRecordingListener mGpsListener;
 	//private String gps;
 
 	@Override
@@ -46,37 +48,22 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> implement
 		mLocationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, this, null);
 		Looper.loop(); // start waiting...when this is done, we'll have the location in this.mLocation
 
+		String gpsResult = mLocation.getLatitude() + " " + mLocation.getLongitude() + " "
+				+ mLocation.getAltitude() + " " + mLocation.getAccuracy();
 
-        /*String url = values[0];
-		Collect.getInstance().getActivityLogger().logAction(this, "/authUser", url);
-
-        // get shared HttpContext so that authentication and cookies are retained.
-        HttpContext localContext = Collect.getInstance().getHttpContext();
-        HttpClient httpclient = WebUtils.createHttpClient(WebUtils.CONNECTION_TIMEOUT);
-
-        DocumentFetchResult result = WebUtils.getAuthResult(url, localContext, httpclient);
-
-        if (result.errorMessage != null) {
-            return result.errorMessage;
-        }*/
-
-		return "Success";
+		return gpsResult;
 	}
 
 	@Override
-	protected void onPostExecute(String value) {
-		/*synchronized (this) {
-            if (mStateListener != null) {
-                mStateListener.userAuthenticationComplete(value);
-            }
-        }*/
+	protected void onPostExecute(String gpsResult) {
+		if (mGpsListener != null) {
+			mGpsListener.autoGpsRecordingComplete(gpsResult);
+		}
 	}
 
-    /*public void setAuthenticationListener(UserAuthenticationListener sl) {
-        synchronized (this) {
-            mStateListener = sl;
-        }
-    }*/
+	public void setAutoGpsRecordingListener(AutoGpsRecordingListener agrl) {
+		mGpsListener = agrl;
+	}
 
 	@Override
 	public void onLocationChanged(Location location) {
