@@ -18,7 +18,7 @@ package org.odk.collect.android.listeners;
  * @author Raghu Mittal (raghu.mittal@gmail.com)
  */
 public interface AutoGpsRecordingListener {
-	void autoGpsRecordingComplete(String result);
+	void autoGpsRecordingComplete(String result, String provider);
 
 	//void promptUserToTurnOnLocationServices();
 }
