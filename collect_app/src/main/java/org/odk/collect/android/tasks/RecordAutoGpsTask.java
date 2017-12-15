@@ -35,6 +35,7 @@ import java.util.List;
 public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	private static final String t = "RecordAutoGpsTask";
 	private Location mLocation;
+	private Location mLocationBackup;
 	private LocationManager mLocationManager;
 	private boolean mGPSOn = false;
 	private boolean mNetworkOn = false;
@@ -55,7 +56,7 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	@Override
 	protected void onPreExecute() {
 		mAutoGpsLocationListener = new AutoGpsLocationListener();
-		mLocation = null;
+		mLocation = mLocationBackup = null;
 		gpsResult = null;
 
 		List<String> providers = mLocationManager.getProviders(true);
@@ -75,6 +76,12 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 
 		} else if (!isNetworkOnly && mGPSOn) {
 			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mAutoGpsLocationListener);
+
+			// Also start the Network gps, which will be used as a backup in case we don't get a reading
+			// from satellite Gps
+			if (mNetworkOn) {
+				mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, mAutoGpsLocationListener);
+			}
 
 		} else if (isNetworkOnly && mNetworkOn) { // Else isNetworkOnly is true, then get Network reading
 			mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, mAutoGpsLocationListener);
@@ -101,6 +108,10 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 			}
 		}
 
+		if (mLocation == null && mLocationBackup != null) {
+			mLocation = mLocationBackup;
+		}
+
 		if (mLocation != null) {
 			gpsResult = mLocation.getLatitude() + " " + mLocation.getLongitude() + " "
 					+ mLocation.getAltitude() + " " + mLocation.getAccuracy();
@@ -119,7 +130,7 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 		mLocationManager.removeUpdates(mAutoGpsLocationListener);
 
 		if (mGpsListener != null) {
-			mGpsListener.autoGpsRecordingComplete(gpsResult);
+			mGpsListener.autoGpsRecordingComplete(gpsResult, mLocation.getProvider());
 		}
 	}
 
@@ -139,13 +150,21 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	public class AutoGpsLocationListener implements LocationListener {
 		@Override
 		public void onLocationChanged(Location location) {
-			// Store the location, assign foundReadingFlag to true to break the main task loop
-			mLocation = location;
-			foundReadingFlag = true;
-			Log.i(t, "Recording auto gps: " + System.currentTimeMillis() +
-					" onStatusChanged() lat: " + mLocation.getLatitude() + " long: " +
-					mLocation.getLongitude() + " alt: " + mLocation.getAltitude() +
-					" acc: " + mLocation.getAccuracy());
+			// If provider is Gps, and network returns a reading, then don't break the loop
+			// But still record the Network gps as backup
+			if (!isNetworkOnly && location.getProvider().equalsIgnoreCase(LocationManager.NETWORK_PROVIDER)) {
+				mLocationBackup = location;
+			} else {
+				// Store the location, assign foundReadingFlag to true to break the main task loop
+				mLocation = location;
+				foundReadingFlag = true;
+
+				Log.i(t, "Recording auto gps: " + System.currentTimeMillis() +
+						" onStatusChanged() lat: " + mLocation.getLatitude() + " long: " +
+						mLocation.getLongitude() + " alt: " + mLocation.getAltitude() +
+						" acc: " + mLocation.getAccuracy());
+			}
+
 		}
 
 		@Override

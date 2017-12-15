@@ -2693,7 +2693,7 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
     }
 
     @Override
-    public void autoGpsRecordingComplete(String gpsResult) {
+    public void autoGpsRecordingComplete(String gpsResult, String provider) {
         if (gpsResult != null) {
             String[] sa = gpsResult.split(" ");
             double gp[] = new double[4];
@@ -2705,7 +2705,7 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
             autoGpsQues.setAnswer(new GeoPointData(gp));
 
             // TODO To be commented out later
-            Toast.makeText(this, "Auto Gps Recorded", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Auto Gps Recorded using " + provider, Toast.LENGTH_SHORT).show();
         }
 
         mRecordAutoGpsTask.setAutoGpsRecordingListener(null);
