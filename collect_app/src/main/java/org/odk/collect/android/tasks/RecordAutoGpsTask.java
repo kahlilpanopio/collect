@@ -38,9 +38,11 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	private LocationManager mLocationManager;
 	private boolean mGPSOn = false;
 	private boolean mNetworkOn = false;
+
 	private boolean isNetworkOnly = false;
 	private boolean foundReadingFlag = false;
 	private boolean forceCancelTask = false;
+	public final static Integer GPS_TIMEOUT = 30000; // 30 sec timeout
 
 	private AutoGpsRecordingListener mGpsListener;
 	private AutoGpsLocationListener mAutoGpsLocationListener;
@@ -53,6 +55,8 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	@Override
 	protected void onPreExecute() {
 		mAutoGpsLocationListener = new AutoGpsLocationListener();
+		mLocation = null;
+		gpsResult = null;
 
 		List<String> providers = mLocationManager.getProviders(true);
 		for (String provider : providers) {
@@ -68,7 +72,7 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 			// Location services off right now
 			// Probably, the user shut down location services on opening the form
 			//mGpsListener.promptUserToTurnOnLocationServices();
-			gpsResult = null;
+
 		} else if (!isNetworkOnly && mGPSOn) {
 			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mAutoGpsLocationListener);
 
@@ -80,18 +84,24 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 
 	@Override
 	protected String doInBackground(Object... args) {
+		long start = System.currentTimeMillis();
+
 		// Break this loop when reading is found or task cancellation happens
 		while (!foundReadingFlag && !forceCancelTask) {
 			try {
 				Thread.sleep(200);
+				long elapsedTime = System.currentTimeMillis() - start;
+
+				// If timeout occurred while getting Gps then break the loop and finish the task
+				if (elapsedTime >= GPS_TIMEOUT) {
+					break;
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-
-
 		}
 
-		if (gpsResult != null) {
+		if (mLocation != null) {
 			gpsResult = mLocation.getLatitude() + " " + mLocation.getLongitude() + " "
 					+ mLocation.getAltitude() + " " + mLocation.getAccuracy();
 		}
