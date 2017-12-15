@@ -20,10 +20,11 @@ import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Looper;
 import android.util.Log;
 
 import org.odk.collect.android.listeners.AutoGpsRecordingListener;
+
+import java.util.List;
 
 /**
  * The background task to automatically collect gps
@@ -31,31 +32,82 @@ import org.odk.collect.android.listeners.AutoGpsRecordingListener;
  *
  * @author Raghu Mittal (raghu.mittal@gmail.com)
  */
-public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> implements LocationListener {
+public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	private static final String t = "RecordAutoGpsTask";
 	private Location mLocation;
 	private LocationManager mLocationManager;
+	private boolean mGPSOn = false;
+	private boolean mNetworkOn = false;
+	private boolean isNetworkOnly = false;
+	private boolean foundReadingFlag = false;
+	private boolean forceCancelTask = false;
 
 	private AutoGpsRecordingListener mGpsListener;
-	//private String gps;
+	private AutoGpsLocationListener mAutoGpsLocationListener;
+	private String gpsResult;
+
+	public RecordAutoGpsTask(LocationManager locationManager) {
+		mLocationManager = locationManager;
+	}
+
+	@Override
+	protected void onPreExecute() {
+		mAutoGpsLocationListener = new AutoGpsLocationListener();
+
+		List<String> providers = mLocationManager.getProviders(true);
+		for (String provider : providers) {
+			if (provider.equalsIgnoreCase(LocationManager.GPS_PROVIDER)) {
+				mGPSOn = true;
+			}
+			if (provider.equalsIgnoreCase(LocationManager.NETWORK_PROVIDER)) {
+				mNetworkOn = true;
+			}
+		}
+
+		if (!mGPSOn && !mNetworkOn) {
+			// Location services off right now
+			// Probably, the user shut down location services on opening the form
+			//mGpsListener.promptUserToTurnOnLocationServices();
+			gpsResult = null;
+		} else if (!isNetworkOnly && mGPSOn) {
+			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mAutoGpsLocationListener);
+
+		} else if (isNetworkOnly && mNetworkOn) { // Else isNetworkOnly is true, then get Network reading
+			mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, mAutoGpsLocationListener);
+		}
+
+	}
 
 	@Override
 	protected String doInBackground(Object... args) {
-		//android.os.Debug.waitForDebugger();
-		Looper.prepare();
+		// Break this loop when reading is found or task cancellation happens
+		while (!foundReadingFlag && !forceCancelTask) {
+			try {
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 
-		mLocationManager = (LocationManager) args[0];
-		mLocationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, this, null);
-		Looper.loop(); // start waiting...when this is done, we'll have the location in this.mLocation
 
-		String gpsResult = mLocation.getLatitude() + " " + mLocation.getLongitude() + " "
-				+ mLocation.getAltitude() + " " + mLocation.getAccuracy();
+		}
+
+		if (gpsResult != null) {
+			gpsResult = mLocation.getLatitude() + " " + mLocation.getLongitude() + " "
+					+ mLocation.getAltitude() + " " + mLocation.getAccuracy();
+		}
 
 		return gpsResult;
 	}
 
 	@Override
+	protected void onCancelled() {
+		mLocationManager.removeUpdates(mAutoGpsLocationListener);
+	}
+
+	@Override
 	protected void onPostExecute(String gpsResult) {
+		mLocationManager.removeUpdates(mAutoGpsLocationListener);
+
 		if (mGpsListener != null) {
 			mGpsListener.autoGpsRecordingComplete(gpsResult);
 		}
@@ -65,41 +117,49 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> implement
 		mGpsListener = agrl;
 	}
 
-	@Override
-	public void onLocationChanged(Location location) {
-		// Store the location, then get the current thread's looper and tell it to
-		// quit looping so it can continue on doing work with the new location.
-		this.mLocation = location;
-		Log.i(t, "Recording auto gps: " + System.currentTimeMillis() +
-				" onStatusChanged() lat: " + mLocation.getLatitude() + " long: " +
-				mLocation.getLongitude() + " alt: " + mLocation.getAltitude() +
-				" acc: " + mLocation.getAccuracy());
-		Looper.myLooper().quit();
+	public void forceCancelTask() {
+		forceCancelTask = true;
 	}
 
-	@Override
-	public void onStatusChanged(String provider, int status, Bundle extras) {
-		switch (status) {
-			case LocationProvider.AVAILABLE: // When available, gps should be recorded
-				Log.i(t, "Recording auto gps: " + System.currentTimeMillis() +
-						" onStatusChanged() lat: " + mLocation.getLatitude() + " long: " +
-						mLocation.getLongitude() + " alt: " + mLocation.getAltitude() +
-						" acc: " + mLocation.getAccuracy());
-				Looper.myLooper().quit();
-				break;
-			case LocationProvider.OUT_OF_SERVICE:
-				break;
-			case LocationProvider.TEMPORARILY_UNAVAILABLE:
-				break;
+	public void stopLocationManager() {
+		mLocationManager.removeUpdates(mAutoGpsLocationListener);
+	}
+
+
+	public class AutoGpsLocationListener implements LocationListener {
+		@Override
+		public void onLocationChanged(Location location) {
+			// Store the location, assign foundReadingFlag to true to break the main task loop
+			mLocation = location;
+			foundReadingFlag = true;
+			Log.i(t, "Recording auto gps: " + System.currentTimeMillis() +
+					" onStatusChanged() lat: " + mLocation.getLatitude() + " long: " +
+					mLocation.getLongitude() + " alt: " + mLocation.getAltitude() +
+					" acc: " + mLocation.getAccuracy());
+		}
+
+		@Override
+		public void onStatusChanged(String provider, int status, Bundle extras) {
+			switch (status) {
+				case LocationProvider.AVAILABLE: // When available, gps should be recorded
+					Log.i(t, "Recording auto gps: " + System.currentTimeMillis() +
+							" onStatusChanged() lat: " + mLocation.getLatitude() + " long: " +
+							mLocation.getLongitude() + " alt: " + mLocation.getAltitude() +
+							" acc: " + mLocation.getAccuracy());
+					break;
+				case LocationProvider.OUT_OF_SERVICE:
+					break;
+				case LocationProvider.TEMPORARILY_UNAVAILABLE:
+					break;
+			}
+		}
+
+		@Override
+		public void onProviderEnabled(String provider) {
+		}
+
+		@Override
+		public void onProviderDisabled(String provider) {
 		}
 	}
-
-	@Override
-	public void onProviderEnabled(String provider) {
-	}
-
-	@Override
-	public void onProviderDisabled(String provider) {
-	}
-
 }
