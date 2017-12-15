@@ -2869,6 +2869,10 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
      * requested.
      */
     private void finishReturnInstance() {
+        if (mRecordAutoGpsTask != null) {
+            mRecordAutoGpsTask.forceCancelTask();
+        }
+
         FormController formController = Collect.getInstance()
                 .getFormController();
         String action = getIntent().getAction();
