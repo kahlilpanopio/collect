@@ -233,7 +233,7 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
     private ImageButton nextButton;
     private ImageButton backButton;
 
-    private TreeElement autoGpsQues;
+    private TreeElement autoGpsQues = null;
 
     private Toolbar toolbar;
     private ODKView odkView;
@@ -1969,6 +1969,10 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
         }
 
         synchronized (saveDialogLock) {
+            if (mRecordAutoGpsTask != null && exit) {
+                mRecordAutoGpsTask.forceCancelTask();
+            }
+
             saveToDiskTask = new SaveToDiskTask(getIntent().getData(), exit, complete,
                     updatedSaveName);
             saveToDiskTask.setFormSavedListener(this);
@@ -2467,8 +2471,17 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
                 saveToDiskTask = null;
             }
         }
-        releaseOdkView();
+        if (mRecordAutoGpsTask != null) {
+            mRecordAutoGpsTask.setAutoGpsRecordingListener(null);
+            // We have to call cancel to terminate the thread, otherwise it
+            // lives on and retains the FEC in memory.
+            if (mRecordAutoGpsTask.getStatus() == AsyncTask.Status.FINISHED) {
+                mRecordAutoGpsTask.cancel(true);
+                mRecordAutoGpsTask = null;
+            }
+        }
 
+        releaseOdkView();
         super.onDestroy();
 
     }
@@ -2542,8 +2555,6 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
         if (quesCategoryVector.size() != 0) {
             autoGpsQues = quesCategoryVector.get(0);
             if (autoGpsQues.getValue() == null) { // Gps value is empty, so gps task should be started
-                LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-
                 if (mRecordAutoGpsTask != null && mRecordAutoGpsTask.getStatus() != AsyncTask.Status.FINISHED) {
                     return; // Gps recording in progress!!!
                 } else if (mRecordAutoGpsTask != null) {
@@ -2552,7 +2563,8 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
                     mRecordAutoGpsTask = null;
                 }
 
-                mRecordAutoGpsTask = new RecordAutoGpsTask();
+                LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+                mRecordAutoGpsTask = new RecordAutoGpsTask(locationManager);
                 mRecordAutoGpsTask.setAutoGpsRecordingListener(this);
                 mRecordAutoGpsTask.execute(locationManager);
             }
@@ -2682,17 +2694,24 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
 
     @Override
     public void autoGpsRecordingComplete(String gpsResult) {
-        String[] sa = gpsResult.split(" ");
-        double gp[] = new double[4];
-        gp[0] = Double.valueOf(sa[0]).doubleValue();
-        gp[1] = Double.valueOf(sa[1]).doubleValue();
-        gp[2] = Double.valueOf(sa[2]).doubleValue();
-        gp[3] = Double.valueOf(sa[3]).doubleValue();
+        if (gpsResult != null) {
+            String[] sa = gpsResult.split(" ");
+            double gp[] = new double[4];
+            gp[0] = Double.valueOf(sa[0]).doubleValue();
+            gp[1] = Double.valueOf(sa[1]).doubleValue();
+            gp[2] = Double.valueOf(sa[2]).doubleValue();
+            gp[3] = Double.valueOf(sa[3]).doubleValue();
 
-        autoGpsQues.setAnswer(new GeoPointData(gp));
+            autoGpsQues.setAnswer(new GeoPointData(gp));
 
-        // TODO To be commented out later
-        Toast.makeText(this, "Auto Gps Recorded", Toast.LENGTH_SHORT).show();
+            // TODO To be commented out later
+            Toast.makeText(this, "Auto Gps Recorded", Toast.LENGTH_SHORT).show();
+        }
+
+        mRecordAutoGpsTask.setAutoGpsRecordingListener(null);
+        RecordAutoGpsTask t = mRecordAutoGpsTask;
+        mRecordAutoGpsTask = null;
+        t.cancel(true);
     }
 
 
