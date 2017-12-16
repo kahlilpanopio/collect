@@ -572,4 +572,6 @@
     <string name="moving_backwards_enabled_message">You may wish to review the following settings:\n\n\u2022 Edit Saved Form\n\u2022 Save Form\n\u2022 Go To Prompt\n\u2022 Constraint processing</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="request_location_on">Please Turn ON location for this form</string>
+    <string name="auto_gps_recorded">Auto Gps Recorded using %s</string>
 </resources>
