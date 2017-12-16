@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore.Images;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
@@ -2558,6 +2559,20 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
         if (quesCategoryVector.size() != 0) {
             autoGpsQues = quesCategoryVector.get(0);
             if (autoGpsQues.getValue() == null) { // Gps value is empty, so gps task should be started
+                // First check whether location services are ON/OFF. If OFF, finish the activity
+                try {
+                    int isLocationOn = Settings.Secure.getInt(getContentResolver(), Settings.Secure.LOCATION_MODE);
+                    if (isLocationOn == 0) { // Location is off, shutdown the form immediately
+                        finish();
+                        Toast.makeText(this, getString(R.string.request_location_on), Toast.LENGTH_LONG).show();
+                        Intent onGPS = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivity(onGPS);
+                        return;
+                    }
+                } catch (Settings.SettingNotFoundException e) {
+                    e.printStackTrace();
+                }
+
                 if (mRecordAutoGpsTask != null && mRecordAutoGpsTask.getStatus() != AsyncTask.Status.FINISHED) {
                     return; // Gps recording in progress!!!
                 } else if (mRecordAutoGpsTask != null) {
@@ -2714,7 +2729,7 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
             autoGpsQues.setAnswer(new GeoPointData(gp));
 
             // TODO To be commented out later
-            Toast.makeText(this, "Auto Gps Recorded using " + provider, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.auto_gps_recorded, provider), Toast.LENGTH_SHORT).show();
         }
 
         mRecordAutoGpsTask.setAutoGpsRecordingListener(null);
