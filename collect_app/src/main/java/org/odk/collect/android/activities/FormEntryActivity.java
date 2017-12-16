@@ -69,6 +69,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import org.javarosa.core.model.Constants;
 import org.javarosa.core.model.FormIndex;
 import org.javarosa.core.model.data.GeoPointData;
 import org.javarosa.core.model.data.IAnswerData;
@@ -2555,7 +2556,9 @@ public class FormEntryActivity extends AppCompatActivity implements AnimationLis
         // Checks that the "auto_gps" question is present in the current form
         if (quesCategoryVector.size() != 0) {
             autoGpsQues = quesCategoryVector.get(0);
-            if (autoGpsQues.getValue() == null) { // Gps value is empty, so gps task should be started
+
+            // Check autoGps is of GPS type and only if value is empty, then gps task should be started
+            if (autoGpsQues.getDataType() == Constants.DATATYPE_GEOPOINT && autoGpsQues.getValue() == null) {
                 // First check whether location services are ON/OFF. If OFF, finish the activity
                 try {
                     int isLocationOn = Settings.Secure.getInt(getContentResolver(), Settings.Secure.LOCATION_MODE);
