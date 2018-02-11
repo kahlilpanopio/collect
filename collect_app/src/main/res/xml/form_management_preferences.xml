@@ -48,4 +48,19 @@
             android:summary="@string/instance_sync_summary"
             android:title="@string/instance_sync" />
     </PreferenceCategory>
+    <PreferenceCategory
+        android:key="auto_gps_settings"
+        android:title="@string/auto_gps_settings">
+        <ListPreference
+            android:dialogTitle="@string/auto_gps_provider"
+            android:entries="@array/gps_provider_entries"
+            android:entryValues="@array/gps_provider_entry_values"
+            android:key="gps_provider_type"
+            android:title="@string/auto_gps_provider"/>
+        <EditTextPreference
+            android:dialogTitle="@string/enter_gps_timeout"
+            android:inputType="number"
+            android:key="gps_timeout"
+            android:title="@string/gps_timeout"/>
+    </PreferenceCategory>
 </PreferenceScreen>

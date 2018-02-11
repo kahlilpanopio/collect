@@ -172,4 +172,12 @@ the specific language governing permissions and limitations under the License. -
         <item>@string/islamic_month_11</item>
         <item>@string/islamic_month_12</item>
     </string-array>
+    <string-array name="gps_provider_entry_values" translatable="false">
+        <item>network_only</item>
+        <item>prefer_satellite_gps</item>
+    </string-array>
+    <string-array name="gps_provider_entries">
+        <item>@string/use_network_only</item>
+        <item>@string/prefer_satellite_gps</item>
+    </string-array>
 </resources>

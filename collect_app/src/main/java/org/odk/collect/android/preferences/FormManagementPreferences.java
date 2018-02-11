@@ -15,15 +15,20 @@
 package org.odk.collect.android.preferences;
 
 import android.os.Bundle;
+import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.support.annotation.Nullable;
+import android.text.InputFilter;
 import android.view.View;
 
 import org.odk.collect.android.R;
+import org.odk.collect.android.preferences.filters.ControlCharacterFilter;
 
 import static org.odk.collect.android.preferences.PreferenceKeys.KEY_AUTOSEND;
+import static org.odk.collect.android.preferences.PreferenceKeys.KEY_AUTO_GPS_PROVIDER;
 import static org.odk.collect.android.preferences.PreferenceKeys.KEY_CONSTRAINT_BEHAVIOR;
+import static org.odk.collect.android.preferences.PreferenceKeys.KEY_GPS_TIMEOUT;
 import static org.odk.collect.android.preferences.PreferenceKeys.KEY_IMAGE_SIZE;
 
 public class FormManagementPreferences extends BasePreferenceFragment {
@@ -36,6 +41,7 @@ public class FormManagementPreferences extends BasePreferenceFragment {
         initConstraintBehaviorPref();
         initAutoSendPrefs();
         initImageSizePrefs();
+        initAutoGpsPrefs();
     }
 
     @Override
@@ -109,5 +115,40 @@ public class FormManagementPreferences extends BasePreferenceFragment {
                 return true;
             }
         });
+    }
+
+    private void initAutoGpsPrefs() {
+        // Auto GPS setting - selecting Auto-GPS provider
+        ListPreference autoGpsProvider = (ListPreference) findPreference(KEY_AUTO_GPS_PROVIDER);
+
+        if (autoGpsProvider == null) {
+            return;
+        }
+
+        autoGpsProvider.setSummary(autoGpsProvider.getEntry());
+        autoGpsProvider.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                int index = ((ListPreference) preference).findIndexOfValue(newValue.toString());
+                String entry = (String) ((ListPreference) preference).getEntries()[index];
+                preference.setSummary(entry);
+                return true;
+            }
+        });
+
+        // Auto GPS setting - GPS timeout (while trying to collect auto-gps, after how much time,
+        // it should time out)
+        EditTextPreference gpsTimeout = (EditTextPreference) findPreference(KEY_GPS_TIMEOUT);
+        gpsTimeout.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                preference.setSummary(newValue.toString() + " sec");
+                return true;
+            }
+        });
+
+        gpsTimeout.setSummary(gpsTimeout.getText() + " sec");
+        gpsTimeout.getEditText().setFilters(
+                new InputFilter[]{new ControlCharacterFilter()});
     }
 }
