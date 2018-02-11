@@ -578,4 +578,10 @@
     <string name="svg_not_supported_device">ImageMap widget requires Android 5 (Lollipop) or newer. Your device is not supported!</string>
     <string name="request_location_on">Please Turn ON location for this form</string>
     <string name="auto_gps_recorded">Auto Gps Recorded using %s</string>
+    <string name="auto_gps_settings">Auto-GPS Settings</string>
+    <string name="auto_gps_provider">Auto GPS provider</string>
+    <string name="use_network_only">Use Network Only</string>
+    <string name="prefer_satellite_gps">Prefer Satellite GPS</string>
+    <string name="enter_gps_timeout">Enter GPS timeout (sec)</string>
+    <string name="gps_timeout">Auto GPS timeout</string>
 </resources>

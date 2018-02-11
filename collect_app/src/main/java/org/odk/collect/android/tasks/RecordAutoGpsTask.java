@@ -23,6 +23,8 @@ import android.os.Bundle;
 import android.util.Log;
 
 import org.odk.collect.android.listeners.AutoGpsRecordingListener;
+import org.odk.collect.android.preferences.GeneralSharedPreferences;
+import org.odk.collect.android.preferences.PreferenceKeys;
 
 import java.util.List;
 
@@ -40,10 +42,10 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 	private boolean mGPSOn = false;
 	private boolean mNetworkOn = false;
 
-	private boolean isNetworkOnly = false;
+	private boolean isNetworkOnly;
 	private boolean foundReadingFlag = false;
 	private boolean forceCancelTask = false;
-	public final static Integer GPS_TIMEOUT = 30000; // 30 sec timeout
+	private Integer GPS_TIMEOUT;
 
 	private AutoGpsRecordingListener mGpsListener;
 	private AutoGpsLocationListener mAutoGpsLocationListener;
@@ -58,6 +60,17 @@ public class RecordAutoGpsTask extends AsyncTask<Object, Void, String> {
 		mAutoGpsLocationListener = new AutoGpsLocationListener();
 		mLocation = mLocationBackup = null;
 		gpsResult = null;
+
+		String autoGpsProvider = (String) GeneralSharedPreferences.getInstance().get(PreferenceKeys.KEY_AUTO_GPS_PROVIDER);
+
+		if (autoGpsProvider.equals(PreferenceKeys.AUTO_GPS_PROVIDER_NETWORK)) {
+			isNetworkOnly = true;
+		} else {
+			isNetworkOnly = false;
+		}
+
+		String gpsTimeout = (String) GeneralSharedPreferences.getInstance().get(PreferenceKeys.KEY_GPS_TIMEOUT);
+		GPS_TIMEOUT = Integer.parseInt(gpsTimeout) * 1000;
 
 		List<String> providers = mLocationManager.getProviders(true);
 		for (String provider : providers) {
